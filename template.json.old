@@ -1,0 +1,192 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Description": "AWS Serverless Microservice",
+  "Resources": {
+    "ApiGatewayToSqsRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "apigateway.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "ApiGatewayToSqsPolicy",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:SendMessage"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "TelemetryQueue",
+                      "Arn"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "TelemetryTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "Telemetry-Store",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "siteId",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "siteId",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    },
+    "DeadLetterQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "TelemetryDLQ"
+      }
+    },
+    "TelemetryQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "TelemetryQueue",
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": "DeadLetterQueue.Arn"
+          },
+          "maxReceiveCount": 3
+        }
+      }
+    },
+    "TelemetryProcessorFunction": {
+      "Type": "AWS::Serverless::Function",
+      "Properties": {
+        "Handler": "dist/index.handler",
+        "Runtime": "nodejs18.x",
+        "MemorySize": 128,
+        "Timeout": 10,
+        "Environment": {
+          "Variables": {
+            "TABLE_NAME": {
+              "Ref": "TelemetryTable"
+            }
+          }
+        },
+        "Policies": [
+          {
+            "DynamoDBCrudPolicy": {
+              "TableName": {
+                "Ref": "TelemetryTable"
+              }
+            }
+          }
+        ],
+        "Events": {
+          "SQSEvent": {
+            "Type": "SQS",
+            "Properties": {
+              "Queue": {
+                "Fn::GetAtt": "TelemetryQueue.Arn"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ApiGateway": {
+      "Type": "AWS::Serverless::Api",
+      "Properties": {
+        "StageName": "Prod",
+        "DefinitionBody": {
+          "swagger": "2.0",
+          "info": {
+            "title": "Telemetry API",
+            "version": "1.0"
+          },
+          "schemes": [
+            "https"
+          ],
+          "paths": {
+            "/telemetry/{siteId}": {
+              "post": {
+                "responses": {
+                  "200": {
+                    "description": "200 response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/Empty"
+                        }
+                      }
+                    }
+                  }
+                },
+                "x-amazon-apigateway-integration": {
+                  "uri": {
+                    "Fn::Sub": "arn:aws:apigateway:${AWS::Region}:sqs:path/${AWS::AccountId}/${TelemetryQueue.QueueName}"
+                  },
+                  "httpMethod": "POST",
+                  "type": "aws",
+                  "passthroughBehavior": "never",
+                  "credentials": {
+                    "Fn::GetAtt": [
+                      "ApiGatewayToSqsRole",
+                      "Arn"
+                    ]
+                  },
+                  "requestParameters": {
+                    "integration.request.header.Content-Type": "'application/json'"
+                  },
+                  "requestTemplates": {
+                    "application/json": "{\n  \"Action\": \"SendMessage\",\n  \"MessageBody\": {\n    \"siteId\": \"$input.params('siteId')\",\n    \"body\": $input.body\n  }\n}"
+                  },
+                  "responses": {
+                    "default": {
+                      "statusCode": "200"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ApiEndpoint": {
+      "Description": "API Gateway endpoint URL",
+      "Value": {
+        "Fn::Sub": "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/telemetry/{siteId}"
+      }
+    }
+  }
+}

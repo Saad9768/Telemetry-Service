@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  # API Gateway connected to SQS
+  ApiGateway:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: dev
+
+  TelemetryProcessorFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: dist/sqsConsumer.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref TelemetryQueue
+      Policies:
+        - Statement:
+          - Effect: Allow
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt TelemetryQueue.Arn
+      Events:
+        WriteTelemetry:
+          Type: Api
+          Properties:
+            Path: /telemetry/{siteId}
+            Method: post
+            RestApiId: !Ref ApiGateway
+
+  # IAM Role for API Gateway to push messages to SQS
+  ApiGatewayRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AllowSQSSendMessage
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sqs:SendMessage
+                Resource: !GetAtt TelemetryQueue.Arn
+
+  # SQS Queue for telemetry data
+  TelemetryQueue:
+    Type: 'AWS::SQS::Queue'
+
+  # Lambda function triggered by SQS to process and store telemetry data in DynamoDB
+  SQSToDynamoDBFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: dist/sqsConsumer.handler
+      Runtime: nodejs18.x
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref TelemetryStoreTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TelemetryStoreTable
+      Events:
+        SQSTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TelemetryQueue.Arn
+
+  # DynamoDB table to store telemetry data
+  TelemetryStoreTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: Telemetry-Store
+      AttributeDefinitions:
+        - AttributeName: siteId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: siteId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+
+Outputs:
+  ApiGatewayUrl:
+    Description: "URL of the API Gateway"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/dev/"
