@@ -89,8 +89,8 @@
         "TelemetryProcessorFunction": {
             "Type": "AWS::Serverless::Function",
             "Properties": {
-                "CodeUri": "./app",
-                "Handler": "dist/index.handler",
+                "CodeUri": "./src",
+                "Handler": "index.handler",
                 "Runtime": "nodejs20.x",
                 "MemorySize": 128,
                 "Timeout": 10,
@@ -116,9 +116,27 @@
                         "Properties": {
                             "Queue": {
                                 "Fn::GetAtt": "TelemetryQueue.Arn"
-                            }
+                            },
+                            "Enabled": true,
+                            "FunctionResponseTypes": [
+                                "ReportBatchItemFailures"
+                            ]
                         }
                     }
+                }
+            },
+            "Metadata": {
+                "BuildMethod": "esbuild",
+                "BuildProperties": {
+                    "Minify": true,
+                    "Target": "ES2020",
+                    "EntryPoints": [
+                        "index.ts"
+                    ],
+                    "External": [
+                        "node_modules/aws-sdk",
+                        "node_modules/aws-lambda"
+                    ]
                 }
             }
         },
