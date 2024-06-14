@@ -1,8 +1,6 @@
 import { DynamoDB } from 'aws-sdk';
 import { SQSEvent, SQSHandler, SQSBatchResponse, SQSBatchItemFailure } from 'aws-lambda';
 
-const dynamoDb = new DynamoDB.DocumentClient();
-
 type Telemetry = {
   siteId: String;
   version: String;
@@ -61,15 +59,11 @@ export const handler: SQSHandler = async (event: SQSEvent): Promise<SQSBatchResp
       params.push(value);
 
     }
-    console.log('params :: ', params)
-    console.log('batchItemFailures :: ', batchItemFailures)
-
     const data: DynamoDB.DocumentClient.BatchWriteItemInput = {
       RequestItems: {
         [TABLE_NAME]: params
       }
     }
-    console.log('data :: ', data)
     await dbCall(data, batchItemFailures)
   } catch (err) {
     console.error('err :: ', err)
@@ -81,8 +75,10 @@ export const handler: SQSHandler = async (event: SQSEvent): Promise<SQSBatchResp
 
 const dbCall = async (params: DynamoDB.DocumentClient.BatchWriteItemInput, batchItemFailures: SQSBatchItemFailure[]) => {
   try {
+    const dynamoDb = new DynamoDB.DocumentClient();
+    console.info('updating the batch :: ', params);
     const batchWriteResult = await dynamoDb.batchWrite(params).promise();
-    console.log('batchWriteResult dynamo db output :: ', batchWriteResult)
+    console.info('batchWriteResult dynamo db output :: ', batchWriteResult)
     const { UnprocessedItems } = batchWriteResult;
     if (UnprocessedItems && Object.keys(UnprocessedItems).length > 0) {
       console.log('Unprocessed items found.');
@@ -95,6 +91,6 @@ const dbCall = async (params: DynamoDB.DocumentClient.BatchWriteItemInput, batch
       }
     }
   } catch (error) {
-    console.error('Error storing telemetry data: ', error);
+    throw error;
   }
 }
