@@ -65,5 +65,14 @@ To deploy the application, use the AWS SAM CLI:
       ```
       sam delete
       ```
+## Test
+To deploy the application, use the AWS SAM CLI:
+   1. Test the application:
+      ```
+      cd Telemetry && npm install
+      ```
+      ```
+      cd Telemetry && npm test
+      ```
 ### Usage
    After deployment, the API Gateway endpoint URL can be used to send telemetry data. Replace ``{siteId}`` with the actual site ID and POST telemetry data in JSON format to the endpoint.
