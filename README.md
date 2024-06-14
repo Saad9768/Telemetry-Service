@@ -50,3 +50,19 @@ The SAM template includes definitions for all the above resources and their conf
 
 ```yaml
 Transform: 'AWS::Serverless-2016-10-31'
+```
+## Deployment
+To deploy the application, use the AWS SAM CLI:
+   1. Build the application:
+      ```
+      sam build
+       ```
+   2. Deploy the application:
+      ```
+      sam deploy
+      ```
+### Usage
+   After deployment, the API Gateway endpoint URL can be used to send telemetry data. Replace ``{siteId}`` with the actual site ID and POST telemetry data in JSON format to the endpoint.
+
+### Cleanup
+   ``sam delete``
