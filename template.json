@@ -3,7 +3,7 @@
     "Transform": "AWS::Serverless-2016-10-31",
     "Description": "AWS Serverless Microservice",
     "Resources": {
-        "ApiGatewayToSqsRole": {
+        "TelemetryApiGatewayToSqsRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
                 "AssumeRolePolicyDocument": {
@@ -24,7 +24,7 @@
                 },
                 "Policies": [
                     {
-                        "PolicyName": "ApiGatewayToSqsPolicy",
+                        "PolicyName": "TelmetryApiGatewayToSqsPolicy",
                         "PolicyDocument": {
                             "Version": "2012-10-17",
                             "Statement": [
@@ -100,7 +100,7 @@
         "TelemetryProcessorFunction": {
             "Type": "AWS::Serverless::Function",
             "Properties": {
-                "CodeUri": "./src",
+                "CodeUri": "./Telemetry",
                 "Handler": "index.handler",
                 "Runtime": "nodejs20.x",
                 "MemorySize": 128,
@@ -155,7 +155,7 @@
                 }
             }
         },
-        "ApiGateway": {
+        "TelemetryApi": {
             "Type": "AWS::Serverless::Api",
             "Properties": {
                 "StageName": "Prod",
@@ -192,7 +192,7 @@
                                     "passthroughBehavior": "never",
                                     "credentials": {
                                         "Fn::GetAtt": [
-                                            "ApiGatewayToSqsRole",
+                                            "TelemetryApiGatewayToSqsRole",
                                             "Arn"
                                         ]
                                     },
@@ -219,7 +219,7 @@
         "ApiEndpoint": {
             "Description": "API Gateway endpoint URL",
             "Value": {
-                "Fn::Sub": "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/telemetry/{siteId}"
+                "Fn::Sub": "https://${TelemetryApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/telemetry/{siteId}"
             }
         }
     }
