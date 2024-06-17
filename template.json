@@ -133,6 +133,7 @@
                             "Queue": {
                                 "Fn::GetAtt": "TelemetryQueue.Arn"
                             },
+                            "BatchSize": 10,
                             "Enabled": true,
                             "FunctionResponseTypes": [
                                 "ReportBatchItemFailures"
