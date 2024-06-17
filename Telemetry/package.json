@@ -12,12 +12,11 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "@aws-sdk/client-dynamodb": "^3.598.0",
-        "aws-sdk": "^2.1639.0",
-        "aws-sdk-client-mock": "^4.0.1"
+        "@aws-sdk/client-dynamodb": "^3.598.0"
     },
     "devDependencies": {
         "@jest/globals": "^29.2.0",
+        "aws-sdk-client-mock": "^4.0.1",
         "@types/aws-lambda": "^8.10.92",
         "@types/jest": "^29.5.12",
         "@types/node": "^20.5.7",

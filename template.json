@@ -93,8 +93,8 @@
                 "CompatibleRuntimes": [
                     "nodejs20.x"
                 ],
-                "Description": "custom Lambda Layer with aws-sdk",
-                "LayerName": "CustomLayer-For-aws-sdk"
+                "Description": "custom Lambda Layer with @aws-sdk/client-dynamodb",
+                "LayerName": "CustomLayer-for-dynamodb"
             }
         },
         "TelemetryProcessorFunction": {
@@ -151,7 +151,7 @@
                     ],
                     "Bundle": true,
                     "External": [
-                        "aws-sdk"
+                        "@aws-sdk/client-dynamodb"
                     ]
                 }
             }
