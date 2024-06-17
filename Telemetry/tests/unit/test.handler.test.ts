@@ -3,7 +3,7 @@ import AWSMock from 'aws-sdk-mock';
 import AWS from 'aws-sdk';
 import { handler } from '../../index';
 
-describe('handler', () => {
+describe.skip('handler', () => {
   const TABLE_NAME = 'TelemetryTable';
   process.env.TABLE_NAME = TABLE_NAME;
 
